@@ -14,9 +14,9 @@ object Dependencies {
   def container (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "container")
 
   val scalaReflect  = "org.scala-lang"                          %   "scala-reflect"               % "2.10.5"
-  val akkaActor     = "com.typesafe.akka"                       %%  "akka-actor"                  % "2.1.4"
-  val akkaSlf4j     = "com.typesafe.akka"                       %%  "akka-slf4j"                  % "2.1.4"
-  val akkaTestKit   = "com.typesafe.akka"                       %%  "akka-testkit"                % "2.1.4"
+  val akkaActor     = "com.typesafe.akka"                       %  "akka-actor_2.11"                  % "2.5.3"
+  val akkaSlf4j     = "com.typesafe.akka"                       %  "akka-slf4j_2.11"                  % "2.5.3"
+  val akkaTestKit   = "com.typesafe.akka"                       %  "akka-testkit_2.11"                % "2.5.3"
   val parboiled     = "org.parboiled"                           %%  "parboiled-scala"             % "1.1.7"
   val shapeless     = "com.chuusai"                             %%  "shapeless"                   % "1.2.4"
   val scalatest     = "org.scalatest"                           %%  "scalatest"                   % "2.2.4"
