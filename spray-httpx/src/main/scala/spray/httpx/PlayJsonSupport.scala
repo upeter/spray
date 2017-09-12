@@ -26,15 +26,15 @@ import spray.http._
 import MediaTypes._
 
 /**
- * A trait providing automatic to and from JSON marshalling/unmarshalling using in-scope *play-json* Reads/Writes.
- * Note that *spray-httpx* does not have an automatic dependency on *play-json*.
- * You'll need to provide the appropriate *play-json* artifacts yourself.
- */
+  * A trait providing automatic to and from JSON marshalling/unmarshalling using in-scope *play-json* Reads/Writes.
+  * Note that *spray-httpx* does not have an automatic dependency on *play-json*.
+  * You'll need to provide the appropriate *play-json* artifacts yourself.
+  */
 trait PlayJsonSupport {
   implicit def playJsonUnmarshaller[T: Reads] =
     delegate[String, T](`application/json`)(string ⇒
       try {
-        implicitly[Reads[T]].reads(Json.parse(string)).asEither.left.map(e ⇒ MalformedContent(s"Received JSON is not valid.\n${Json.prettyPrint(JsError.toFlatJson(e))}"))
+        implicitly[Reads[T]].reads(Json.parse(string)).asEither.left.map(e ⇒ MalformedContent(s"Received JSON is not valid.\n${Json.prettyPrint(JsErrorUtils.toFlatJson(e))}"))
       } catch {
         case NonFatal(exc) ⇒ Left(MalformedContent(exc.getMessage, exc))
       })(UTF8StringUnmarshaller)
@@ -54,10 +54,37 @@ trait PlayJsonSupport {
   // to deal with any possible error, including exceptions.
   //
   private def delegate[A, B](unmarshalFrom: ContentTypeRange*)(f: A ⇒ Deserialized[B])(implicit ma: Unmarshaller[A]): Unmarshaller[B] =
-    new SimpleUnmarshaller[B] {
-      val canUnmarshalFrom = unmarshalFrom
-      def unmarshal(entity: HttpEntity) = ma(entity).right.flatMap(a ⇒ f(a))
-    }
+  new SimpleUnmarshaller[B] {
+    val canUnmarshalFrom = unmarshalFrom
+    def unmarshal(entity: HttpEntity) = ma(entity).right.flatMap(a ⇒ f(a))
+  }
 }
 
 object PlayJsonSupport extends PlayJsonSupport
+
+object JsErrorUtils {
+
+  def toFlatJson(e: JsError): JsObject = toFlatJson(e.errors)
+  def toFlatJson(errors: Seq[(JsPath, Seq[JsonValidationError])]): JsObject =
+    errors.foldLeft(Json.obj()) { (obj, error) ⇒
+      obj ++ Json.obj(error._1.toJsonString -> error._2.foldLeft(Json.arr()) { (arr, err) ⇒
+        arr :+ Json.obj(
+          "msg" -> err.message,
+          "args" -> err.args.foldLeft(Json.arr()) { (arr, arg) ⇒
+            arr :+ (arg match {
+              case s: String   ⇒ JsString(s)
+              case nb: Int     ⇒ JsNumber(nb)
+              case nb: Short   ⇒ JsNumber(nb.toInt)
+              case nb: Long    ⇒ JsNumber(nb)
+              case nb: Double  ⇒ JsNumber(nb)
+              case nb: Float   ⇒ JsNumber(nb.toDouble)
+              case b: Boolean  ⇒ JsBoolean(b)
+              case js: JsValue ⇒ js
+              case x           ⇒ JsString(x.toString)
+            })
+          })
+      })
+    }
+
+}
+
